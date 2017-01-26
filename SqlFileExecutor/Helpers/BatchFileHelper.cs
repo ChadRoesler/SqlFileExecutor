@@ -32,7 +32,7 @@ namespace SqlFileExecutor.Helpers
         {
             IList<string> statementList = new List<string>();
 
-            var regexPattern = string.Format(ResourceStrings.RegexFormat, ResourceStrings.SqlStrings, ResourceStrings.DashComments, ResourceStrings.DashComments, ResourceStrings.Separator);
+            var regexPattern = string.Format(ResourceStrings.RegexFormat, ResourceStrings.SqlStrings, ResourceStrings.DashComments, ResourceStrings.StarComments, ResourceStrings.Separator);
 
             var regexReplace = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
