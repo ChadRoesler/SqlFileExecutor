@@ -1,17 +1,20 @@
 ﻿namespace SqlFileExecutor.Constants
 {
-    internal class ResourceStrings
+    internal sealed class ResourceStrings
     {
-        public const string SqlStrings = @"(?<KEEP1>'[^']*')";
-        public const string DashComments = @"(?<KEEP1>--.*$)";
-        public const string StarComments = @"(?<KEEP1>/\*[\S\s]*?\*/)";
-        public const string Separator = @"(?<KEEP1>^|\s)(?<BATCHSPLITTER>GO)(?<KEEP2>\s|$)";
-        public const string RegexFormat = "{0}|{1}|{2}|{3}";
-        public const string RegexSplit = @"\|\{\[_REMOVE_\]\}\|";
-        public const string BatchTerminatorReplacement = @" |{[_REMOVE_]}| ";
-        public const string BatchSplitterGroup = "BATCHSPLITTER";
-        public const string Keep1Group = "KEEP1";
-        public const string Keep2Group = "KEEP2";
-        public const string AppendedGo = "\r\nGO\r\n";
+        public const string LeftOfBatchGroupMarker = "LEFT";
+        public const string RightOfBatchGroupMarker = "RIGHT";
+        public const string BatchGroupMarker = "BATCHGROUP";
+        public const string RemovalMarker = "_REMOVE_";
+        public const string BatchTerminator = "GO";
+
+        public readonly static string FormattedBatchTerminator = $@"{System.Environment.NewLine}{BatchTerminator}{System.Environment.NewLine}";
+        public readonly static string SqlStringPattern = $@"(?<{LeftOfBatchGroupMarker}>'[^']*')";
+        public readonly static string SingleLineCommentsPattern = $@"(?<{LeftOfBatchGroupMarker}>--.*$)";
+        public readonly static string BlockCommentPattern = $@"(?<{LeftOfBatchGroupMarker}>/\*[\S\s]*?\*/)";
+        public readonly static string BatchPattern = $@"(?<{LeftOfBatchGroupMarker}>^|\s)(?<{BatchGroupMarker}>{BatchTerminator})(?<{RightOfBatchGroupMarker}>\s|$)";
+        public readonly static string SplitPattern = $@"\|\{{\[{RemovalMarker}\]\}}\|";
+        public readonly static string RemovalPattern = $@" |{{[{RemovalMarker}]}}| ";
+        public readonly static string MarkerPattern = $@"{SqlStringPattern}|{SingleLineCommentsPattern}|{BlockCommentPattern }|{BatchPattern}";
     }
 }

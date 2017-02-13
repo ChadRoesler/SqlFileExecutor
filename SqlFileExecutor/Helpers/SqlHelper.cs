@@ -9,12 +9,14 @@ namespace SqlFileExecutor.Helpers
 {
     public static class SqlHelper
     {
-        public static void SqlInfoExecutor(string connString, string sqlToExecute)
+        private static List<string> InfoList = new List<string>();
+
+        public static string SqlInfoExecutor(string connString, string sqlToExecute)
         {
             var errorList = new List<string>();
             using (var connection = new SqlConnection(connString))
             {
-                var sqlBatched = BatchFileHelper.GetBatchStatementList(sqlToExecute);
+                var sqlBatched = BatchFileHelper.GetBatches(sqlToExecute);
                 foreach (var batch in sqlBatched)
                 {
                     try
@@ -42,6 +44,14 @@ namespace SqlFileExecutor.Helpers
             {
                 throw new Exception(string.Join(Environment.NewLine, errorList.ToArray()));
             }
+            if (InfoList.Count > 0)
+            {
+                return string.Join(Environment.NewLine, InfoList.ToArray());
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
 
         public static void SqlConnectionTest(string connString)
@@ -51,6 +61,11 @@ namespace SqlFileExecutor.Helpers
             {
                 connection.Open();
             }
+        }
+
+        internal static void OnInfoMessage(object sender, SqlInfoMessageEventArgs args)
+        {
+            InfoList.Add(args.Message);
         }
     }
 }

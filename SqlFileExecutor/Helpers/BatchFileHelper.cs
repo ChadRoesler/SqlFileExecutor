@@ -10,44 +10,49 @@ namespace SqlFileExecutor.Helpers
     /// </summary>
     public static class BatchFileHelper
     {
-        internal static bool ValidateHasTextToRun(string sqlStatement, string seperatorRegexPattern)
+        internal static bool HasTextToRun(string sqlStatement)
         {
-            sqlStatement = Regex.Replace(sqlStatement, ResourceStrings.RegexSplit, string.Empty, RegexOptions.IgnoreCase | RegexOptions.Multiline);
-            return !string.IsNullOrWhiteSpace(sqlStatement);
+            sqlStatement = Regex.Replace(sqlStatement, ResourceStrings.SplitPattern, string.Empty, RegexOptions.IgnoreCase | RegexOptions.Multiline).Replace(Environment.NewLine, string.Empty);
+
+            if (string.IsNullOrWhiteSpace(sqlStatement))
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        internal static string ReplaceBatchSplitItems(Match matchedItem, Regex regex)
+        internal static string ReplaceBatchSplitItems(Match matchedItem)
         {
-            if(matchedItem.Groups[ResourceStrings.BatchSplitterGroup].Success)
+            if (matchedItem.Groups[ResourceStrings.BatchGroupMarker].Success)
             {
-                return matchedItem.Groups[ResourceStrings.Keep1Group].Value + ResourceStrings.BatchTerminatorReplacement + matchedItem.Groups[ResourceStrings.Keep2Group].Value;
+                return $@"{matchedItem.Groups[ResourceStrings.LeftOfBatchGroupMarker].Value}{ResourceStrings.RemovalPattern}{matchedItem.Groups[ResourceStrings.RightOfBatchGroupMarker].Value}";
             }
             else
             {
-                return matchedItem.Groups[ResourceStrings.Keep1Group].Value + matchedItem.Groups[ResourceStrings.Keep2Group].Value;
+                return $@"{matchedItem.Groups[ResourceStrings.LeftOfBatchGroupMarker].Value}{matchedItem.Groups[ResourceStrings.RightOfBatchGroupMarker].Value}";
             }
         }
 
-        public static IEnumerable<string> GetBatchStatementList(string sqlToRun)
+        public static IEnumerable<string> GetBatches(string sqlToRun)
         {
-            IList<string> statementList = new List<string>();
+            IList<string> batches = new List<string>();
 
-            var regexPattern = string.Format(ResourceStrings.RegexFormat, ResourceStrings.SqlStrings, ResourceStrings.DashComments, ResourceStrings.StarComments, ResourceStrings.Separator);
+            var markerRegex = new Regex(ResourceStrings.MarkerPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
-            var regexReplace = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            var markedSql = markerRegex.Replace(sqlToRun, match => ReplaceBatchSplitItems(match));
 
-            var scrubbedSQLStatement = regexReplace.Replace(sqlToRun, match => ReplaceBatchSplitItems(match, regexReplace));
+            var parsedBatches = Regex.Split(markedSql, ResourceStrings.SplitPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
-            var regexSplit = Regex.Split(scrubbedSQLStatement, ResourceStrings.RegexSplit, RegexOptions.IgnoreCase | RegexOptions.Multiline);
-
-            foreach (string sqlStatement in regexSplit)
+            foreach (string batch in parsedBatches)
             {
-                if (ValidateHasTextToRun(sqlStatement, regexPattern))
+                if (HasTextToRun(batch))
                 {
-                    statementList.Add(sqlStatement);
+                    batches.Add(batch);
                 }
             }
-            return statementList;
+
+            return batches;
         }
     }
 }

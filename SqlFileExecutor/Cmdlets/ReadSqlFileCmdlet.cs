@@ -7,48 +7,58 @@ using SqlFileExecutor.Helpers;
 
 namespace SqlFileExecutor.Cmdlets
 {
-    [Cmdlet("Read", "ReadSqlFile")]
+    [Cmdlet("Read", "SqlFile")]
     [OutputType(typeof(IEnumerable<string>))]
-    public class ReadSqlFileCmdlet: PSCmdlet
+    public class ReadSqlFileCmdlet : PSCmdlet
     {
-        [Parameter(Position =0)]
+        [Parameter(Position = 0)]
         [Alias("sql")]
         [ValidateNotNullOrEmpty]
-        public string[] SqlFilePath { get; set; }
+        public string[] Path { get; set; }
 
         private string LoadedSql;
 
-        private IEnumerable<string> SqlBatchList;
-        private List<string> PrasedSqlFilePaths = new List<string>();
+        private IEnumerable<string> Batches;
+        private List<string> ParsedPaths = new List<string>();
 
         protected override void BeginProcessing()
         {
             base.BeginProcessing();
+            ProviderInfo provider;
+
             try
             {
-                foreach (var sqlFile in SqlFilePath)
+                foreach (var sqlFile in Path)
                 {
-                    ProviderInfo provider;
-                    PrasedSqlFilePaths.AddRange(GetResolvedProviderPathFromPSPath(sqlFile, out provider));
+                    ParsedPaths.AddRange(GetResolvedProviderPathFromPSPath(sqlFile, out provider));
                 }
 
-                foreach (var sqlToLoad in SqlFilePath)
+                foreach (var sqlToLoad in ParsedPaths)
                 {
-                    LoadedSql += File.ReadAllText(sqlToLoad) + ResourceStrings.AppendedGo;
+                    LoadedSql += File.ReadAllText(sqlToLoad) + ResourceStrings.BatchTerminator;
                 }
             }
             catch (Exception ex)
             {
                 var errorExecuting = new ErrorRecord(ex, ErrorStrings.FileError, ErrorCategory.InvalidData, ex.Source);
-                ThrowTerminatingError(errorExecuting);
+                WriteError(errorExecuting);
             }
 
         }
 
         protected override void ProcessRecord()
         {
-            SqlBatchList = BatchFileHelper.GetBatchStatementList(LoadedSql);
-            WriteObject(SqlBatchList);
+            base.ProcessRecord();
+            try
+            {
+                Batches = BatchFileHelper.GetBatches(LoadedSql);
+                WriteObject(Batches);
+            }
+            catch (Exception ex)
+            {
+                var errorExecuting = new ErrorRecord(ex, ErrorStrings.BatchParserError, ErrorCategory.InvalidData, ex.Source);
+                WriteError(errorExecuting);
+            }
         }
 
     }

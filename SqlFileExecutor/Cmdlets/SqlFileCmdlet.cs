@@ -18,40 +18,57 @@ namespace SqlFileExecutor.Cmdlets
         [Parameter(Position = 1)]
         [Alias("sql")]
         [ValidateNotNullOrEmpty]
-        public string[] SqlFilePath { get; set; }
+        public string[] Path { get; set; }
 
+        [Parameter(Position = 2)]
+        [Alias("ops")]
+        public SwitchParameter OutputPrintStatements
+        {
+            get
+            {
+                return OutputPrint;
+            }
+            set
+            {
+                OutputPrint = value;
+            }
+        }
+
+        private bool OutputPrint;
         private string LoadedSql = string.Empty;
-        private List<string> PrasedSqlFilePaths = new List<string>();
+        private List<string> ParsedPaths = new List<string>();
 
         protected override void BeginProcessing()
         {
             base.BeginProcessing();
+            ProviderInfo provider;
+
             try
             {
                 SqlHelper.SqlConnectionTest(ConnectionString);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 var errorExecuting = new ErrorRecord(ex, ErrorStrings.SqlConnectionError, ErrorCategory.InvalidData, ex.Source);
-                ThrowTerminatingError(errorExecuting);
+                WriteError(errorExecuting);
             }
+
             try
             {
-                foreach(var sqlFile in SqlFilePath)
+                foreach (var sqlFile in Path)
                 {
-                    ProviderInfo provider;
-                    PrasedSqlFilePaths.AddRange(GetResolvedProviderPathFromPSPath(sqlFile, out provider));
+                    ParsedPaths.AddRange(GetResolvedProviderPathFromPSPath(sqlFile, out provider));
                 }
 
-                foreach (var sqlToLoad in PrasedSqlFilePaths)
+                foreach (var sqlToLoad in ParsedPaths)
                 {
-                    LoadedSql += File.ReadAllText(sqlToLoad) + ResourceStrings.AppendedGo;
+                    LoadedSql += File.ReadAllText(sqlToLoad) + ResourceStrings.FormattedBatchTerminator;
                 }
             }
             catch (Exception ex)
             {
                 var errorExecuting = new ErrorRecord(ex, ErrorStrings.FileError, ErrorCategory.InvalidData, ex.Source);
-                ThrowTerminatingError(errorExecuting);
+                WriteError(errorExecuting);
             }
         }
 
@@ -60,7 +77,11 @@ namespace SqlFileExecutor.Cmdlets
             base.ProcessRecord();
             try
             {
-                SqlHelper.SqlInfoExecutor(ConnectionString, LoadedSql);
+                var infoText = SqlHelper.SqlInfoExecutor(ConnectionString, LoadedSql);
+                if (OutputPrint)
+                {
+                    WriteObject(infoText);
+                }
             }
             catch (Exception ex)
             {
